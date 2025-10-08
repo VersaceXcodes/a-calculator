@@ -149,17 +149,17 @@ export const useAppStore = create<AppState>()(
       },
 
       logout_user: () => {
-        set((state) => ({
-          authentication_state: {
-            current_user: null,
-            auth_token: null,
-            authentication_status: {
-              is_authenticated: false,
-              is_loading: false,
+          set(() => ({
+            authentication_state: {
+              current_user: user,
+              auth_token: token,
+              authentication_status: {
+                is_authenticated: true,
+                is_loading: false,
+              },
+              error_message: null,
             },
-            error_message: null,
-          },
-        }));
+          }));
       },
 
       initialize_auth: async () => {
