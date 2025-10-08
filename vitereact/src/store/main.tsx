@@ -113,7 +113,7 @@ export const useAppStore = create<AppState>()(
         try {
           const response = await axios.post(
             `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000'}/api/auth/register`,
-            { email, password, name },
+            { email, password_hash: password },
             { headers: { 'Content-Type': 'application/json' } }
           );
 
