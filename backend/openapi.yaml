@@ -1,0 +1,386 @@
+openapi: 3.0.0
+info:
+  title: A-Calculator API
+  version: 1.0.0
+  description: API for the A-Calculator Web Application
+servers:
+  - url: http://localhost:3000
+    description: Development server
+paths:
+  /api/auth/register:
+    post:
+      summary: Register a new user
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserInput"
+      responses:
+        "200":
+          description: User registration successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+  /api/auth/login:
+    post:
+      summary: User login
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  minLength: 8
+      responses:
+        "200":
+          description: User login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+  /api/users/{user_id}:
+    get:
+      summary: Get user profile
+      operationId: getUserProfile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    put:
+      summary: Update user profile
+      operationId: updateUserProfile
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserInput"
+      responses:
+        "200":
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+  /api/calculations:
+    post:
+      summary: Create a calculation
+      operationId: createCalculation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCalculationInput"
+      responses:
+        "201":
+          description: Calculation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculation"
+  /api/calculations/{calculation_id}:
+    get:
+      summary: Get a calculation
+      operationId: getCalculation
+      parameters:
+        - name: calculation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Calculation retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculation"
+    put:
+      summary: Update a calculation
+      operationId: updateCalculation
+      parameters:
+        - name: calculation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCalculationInput"
+      responses:
+        "200":
+          description: Calculation updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Calculation"
+  /api/settings:
+    post:
+      summary: Create user settings
+      operationId: createSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSettingInput"
+      responses:
+        "201":
+          description: Settings created successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+  /api/settings/{setting_id}:
+    get:
+      summary: Get user settings
+      operationId: getSettings
+      parameters:
+        - name: setting_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Settings retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+    put:
+      summary: Update user settings
+      operationId: updateSettings
+      parameters:
+        - name: setting_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSettingInput"
+      responses:
+        "200":
+          description: Settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Setting"
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+        password_hash:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    CreateUserInput:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password_hash:
+          type: string
+          minLength: 8
+    UpdateUserInput:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+          format: email
+          nullable: true
+        password_hash:
+          type: string
+          minLength: 8
+          nullable: true
+        is_active:
+          type: boolean
+          nullable: true
+    Calculation:
+      type: object
+      properties:
+        calculation_id:
+          type: string
+        input_value:
+          type: string
+          nullable: true
+        operation:
+          type: string
+          nullable: true
+        result:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+        device_type:
+          type: string
+          nullable: true
+        device_id:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+    CreateCalculationInput:
+      type: object
+      properties:
+        input_value:
+          type: string
+          nullable: true
+        operation:
+          type: string
+          nullable: true
+        result:
+          type: string
+          nullable: true
+        device_type:
+          type: string
+          nullable: true
+        device_id:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+    UpdateCalculationInput:
+      type: object
+      properties:
+        calculation_id:
+          type: string
+        input_value:
+          type: string
+          nullable: true
+        operation:
+          type: string
+          nullable: true
+        result:
+          type: string
+          nullable: true
+        device_type:
+          type: string
+          nullable: true
+        device_id:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    Setting:
+      type: object
+      properties:
+        setting_id:
+          type: string
+        user_id:
+          type: string
+        theme:
+          type: string
+          nullable: true
+        button_size:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+    CreateSettingInput:
+      type: object
+      properties:
+        user_id:
+          type: string
+        theme:
+          type: string
+          nullable: true
+        button_size:
+          type: string
+          nullable: true
+    UpdateSettingInput:
+      type: object
+      properties:
+        setting_id:
+          type: string
+        theme:
+          type: string
+          nullable: true
+        button_size:
+          type: string
+          nullable: true
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true

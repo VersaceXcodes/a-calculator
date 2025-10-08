@@ -1,0 +1,180 @@
+asyncapi: 2.0.0
+info:
+  title: a-calculator Realtime API
+  version: 1.0.0
+  description: AsyncAPI specification for real-time features of the 'a-calculator'
+    web application.
+servers:
+  development:
+    url: http://localhost:3000
+    protocol: ws
+channels:
+  calculator/state:
+    description: The real-time state channel for calculator operations.
+    subscribe:
+      summary: Subscribe to calculator state updates.
+      operationId: onCalculatorStateUpdate
+      message:
+        name: calculatorStateUpdate
+        payload:
+          type: object
+          properties:
+            input_value:
+              type: string
+              description: The current input value in the calculator.
+            operation:
+              type: string
+              nullable: true
+              description: The current operation being performed (or null if none).
+            result:
+              type: string
+              nullable: true
+              description: The result of the last calculation (or null if not calculated).
+        required:
+          - input_value
+  calculator/result:
+    description: Channel for delivering real-time calculation results.
+    subscribe:
+      summary: Subscribe to receive real-time calculation results.
+      operationId: onCalculatorResult
+      message:
+        name: calculationResult
+        payload:
+          type: object
+          properties:
+            calculation_id:
+              type: string
+              description: Unique identifier for the calculation.
+            input_value:
+              type: string
+              nullable: true
+              description: The input value of the calculation.
+            operation:
+              type: string
+              nullable: true
+              description: The operation performed in the calculation.
+            result:
+              type: string
+              nullable: true
+              description: The result of the calculation.
+            error_message:
+              type: string
+              nullable: true
+              description: Any error message if the calculation failed.
+            created_at:
+              type: string
+              format: date-time
+              description: Timestamp when the calculation was created.
+        required:
+          - calculation_id
+          - created_at
+  calculator/error:
+    description: Real-time notifications of calculation errors.
+    subscribe:
+      summary: Subscribe to listen for calculation errors.
+      operationId: onCalculationError
+      message:
+        name: calculationError
+        payload:
+          type: object
+          properties:
+            calculation_id:
+              type: string
+              description: Unique identifier for the calculation.
+            error_message:
+              type: string
+              nullable: true
+              description: Error message describing the issue.
+            created_at:
+              type: string
+              format: date-time
+              description: When the error was logged.
+        required:
+          - calculation_id
+          - created_at
+components:
+  schemas:
+    Calculation:
+      type: object
+      properties:
+        calculation_id:
+          type: string
+        input_value:
+          type: string
+          nullable: true
+        operation:
+          type: string
+          nullable: true
+        result:
+          type: string
+          nullable: true
+        device_type:
+          type: string
+          nullable: true
+        device_id:
+          type: string
+          nullable: true
+        error_message:
+          type: string
+          nullable: true
+        user_agent:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - calculation_id
+        - created_at
+    User:
+      type: object
+      properties:
+        user_id:
+          type: string
+        email:
+          type: string
+        password_hash:
+          type: string
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - user_id
+        - email
+        - password_hash
+        - is_active
+        - created_at
+    Setting:
+      type: object
+      properties:
+        setting_id:
+          type: string
+        user_id:
+          type: string
+        theme:
+          type: string
+          nullable: true
+        button_size:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+        - setting_id
+        - user_id
+        - created_at

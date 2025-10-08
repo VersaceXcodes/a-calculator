@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759911632199,
+  "operation": {
+    "id": "backend:server:main"
+  },
+  "projectId": "a-calculator",
+  "files": [
+    {
+      "path": "/mnt/data/a-calculator/backend/server.ts",
+      "type": "text",
+      "size": 24768,
+      "dependencies": false
+    }
+  ]
+}

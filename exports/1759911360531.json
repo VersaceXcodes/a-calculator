@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759911360531,
+  "operation": {
+    "id": "db:postgres"
+  },
+  "projectId": "a-calculator",
+  "files": [
+    {
+      "path": "/mnt/data/a-calculator/backend/db.sql",
+      "type": "text",
+      "size": 1778,
+      "dependencies": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759911402594,
+  "operation": {
+    "id": "db:schemas:zod"
+  },
+  "projectId": "a-calculator",
+  "files": [
+    {
+      "path": "/mnt/data/a-calculator/backend/schema.ts",
+      "type": "text",
+      "size": 4560,
+      "dependencies": false
+    }
+  ]
+}

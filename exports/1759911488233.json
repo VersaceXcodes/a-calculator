@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759911488233,
+  "operation": {
+    "id": "backend:specifications:openapi"
+  },
+  "projectId": "a-calculator",
+  "files": [
+    {
+      "path": "/mnt/data/a-calculator/backend/openapi.yaml",
+      "type": "text",
+      "size": 9450,
+      "dependencies": false
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759911440114,
+  "operation": {
+    "id": "backend:specifications:asyncapi"
+  },
+  "projectId": "a-calculator",
+  "files": [
+    {
+      "path": "/mnt/data/a-calculator/backend/asyncapi.yaml",
+      "type": "text",
+      "size": 4926,
+      "dependencies": false
+    }
+  ]
+}

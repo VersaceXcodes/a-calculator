@@ -1,0 +1,15 @@
+{
+  "timestamp": 1759911665020,
+  "operation": {
+    "id": "settings:config:package"
+  },
+  "projectId": "a-calculator",
+  "files": [
+    {
+      "path": "/mnt/data/a-calculator/backend/.env",
+      "type": "text",
+      "size": 249,
+      "dependencies": false
+    }
+  ]
+}
