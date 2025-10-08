@@ -1,11 +1,11 @@
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PGlite } from '@electric-sql/pglite';
 import { fileURLToPath } from 'url';
-import jwt from 'jsonwebtoken';
+import jwt, { JwtPayload } from 'jsonwebtoken';
 import morgan from 'morgan';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,6 +21,50 @@ import {
   createSettingInputSchema,
   updateSettingInputSchema
 } from './schema.ts';
+
+interface UserRow {
+  user_id: string;
+  email: string;
+  password_hash: string;
+  is_active: boolean;
+  created_at: number;
+  updated_at: number | null;
+}
+
+interface CalculationRow {
+  calculation_id: string;
+  input_value: string | null;
+  operation: string | null;
+  result: string | null;
+  created_at: number;
+  updated_at: number | null;
+  device_type: string | null;
+  device_id: string | null;
+  error_message: string | null;
+  user_agent: string | null;
+}
+
+interface SettingRow {
+  setting_id: string;
+  user_id: string;
+  theme: string | null;
+  button_size: string | null;
+  created_at: number;
+  updated_at: number | null;
+}
+
+interface JwtPayloadWithUser extends JwtPayload {
+  user_id: string;
+  email: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      user?: UserRow;
+    }
+  }
+}
 
 dotenv.config();
 
@@ -64,10 +108,8 @@ function createErrorResponse(
 }
 
 // Environment variables and database setup
-const { 
-  JWT_SECRET = 'your-secret-key',
-  PORT = 3000
-} = process.env;
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 // Use PGlite for local development (embedded PostgreSQL)
 const db = new PGlite('./data');
@@ -106,7 +148,7 @@ app.use(express.static(path.join(__dirname, 'public')));
   Auth middleware for protected routes
   Validates JWT token and attaches user info to request
 */
-const authenticateToken = async (req, res, next) => {
+const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -115,9 +157,9 @@ const authenticateToken = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayloadWithUser;
     
-    const result = await db.query(
+    const result = await db.query<UserRow>(
       'SELECT user_id, email, is_active, created_at, updated_at FROM users WHERE user_id = $1', 
       [decoded.user_id]
     );
@@ -126,7 +168,7 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json(createErrorResponse('Invalid token - user not found', null, 'USER_NOT_FOUND'));
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
     if (!user.is_active) {
       return res.status(401).json(createErrorResponse('Account is inactive', null, 'ACCOUNT_INACTIVE'));
     }
@@ -160,14 +202,14 @@ app.post('/api/auth/register', async (req, res) => {
     const userId = uuidv4();
     const now = Date.now();
     
-    const result = await db.query(
+    const result = await db.query<UserRow>(
       `INSERT INTO users (user_id, email, password_hash, is_active, created_at, updated_at) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING user_id, email, is_active, created_at, updated_at`,
       [userId, email.toLowerCase().trim(), password_hash, true, now, now]
     );
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
 
     // Generate JWT token
     const token = jwt.sign(
@@ -201,7 +243,7 @@ app.post('/api/auth/register', async (req, res) => {
 */
 app.get('/api/auth/verify', authenticateToken, async (req, res) => {
   try {
-    const user = req.user;
+    const user = req.user!;
     
     res.json({
       message: 'Token is valid',
@@ -229,11 +271,11 @@ app.get('/api/users/:user_id', authenticateToken, async (req, res) => {
     const { user_id } = req.params;
 
     // Check if user is accessing their own profile or has admin privileges
-    if (req.user.user_id !== user_id) {
+    if (req.user!.user_id !== user_id) {
       return res.status(403).json(createErrorResponse('Access denied - can only view own profile', null, 'ACCESS_DENIED'));
     }
 
-    const result = await db.query(
+    const result = await db.query<UserRow>(
       'SELECT user_id, email, is_active, created_at, updated_at FROM users WHERE user_id = $1',
       [user_id]
     );
@@ -242,7 +284,7 @@ app.get('/api/users/:user_id', authenticateToken, async (req, res) => {
       return res.status(404).json(createErrorResponse('User not found', null, 'USER_NOT_FOUND'));
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
 
     res.json({
       user: {
@@ -267,7 +309,7 @@ app.put('/api/users/:user_id', authenticateToken, async (req, res) => {
     const { user_id } = req.params;
 
     // Check if user is updating their own profile
-    if (req.user.user_id !== user_id) {
+    if (req.user!.user_id !== user_id) {
       return res.status(403).json(createErrorResponse('Access denied - can only update own profile', null, 'ACCESS_DENIED'));
     }
 
@@ -316,13 +358,13 @@ app.put('/api/users/:user_id', authenticateToken, async (req, res) => {
       RETURNING user_id, email, is_active, created_at, updated_at
     `;
 
-    const result = await db.query(query, updateValues);
+    const result = await db.query<UserRow>(query, updateValues);
 
     if (result.rows.length === 0) {
       return res.status(404).json(createErrorResponse('User not found', null, 'USER_NOT_FOUND'));
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
 
     res.json({
       message: 'Profile updated successfully',
@@ -364,7 +406,7 @@ app.post('/api/calculations', authenticateToken, async (req, res) => {
     const calculationId = uuidv4();
     const now = Date.now();
 
-    const result = await db.query(
+    const result = await db.query<CalculationRow>(
       `INSERT INTO calculations 
        (calculation_id, input_value, operation, result, created_at, updated_at, device_type, device_id, error_message, user_agent) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
@@ -383,7 +425,7 @@ app.post('/api/calculations', authenticateToken, async (req, res) => {
       ]
     );
 
-    const calculation = result.rows[0];
+    const calculation = result.rows[0] as CalculationRow;
 
     res.status(201).json({
       message: 'Calculation recorded successfully',
@@ -393,7 +435,7 @@ app.post('/api/calculations', authenticateToken, async (req, res) => {
         operation: calculation.operation,
         result: calculation.result,
         created_at: new Date(calculation.created_at).toISOString(),
-        updated_at: new Date(calculation.updated_at).toISOString(),
+        updated_at: new Date(calculation.updated_at!).toISOString(),
         device_type: calculation.device_type,
         device_id: calculation.device_id,
         error_message: calculation.error_message,
@@ -422,12 +464,12 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Find user by email (direct password comparison for development)
-    const result = await db.query('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
+    const result = await db.query<UserRow>('SELECT * FROM users WHERE email = $1', [email.toLowerCase().trim()]);
     if (result.rows.length === 0) {
       return res.status(400).json(createErrorResponse('Invalid email or password', null, 'INVALID_CREDENTIALS'));
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
 
     // Check if account is active
     if (!user.is_active) {
@@ -470,7 +512,7 @@ app.get('/api/calculations/:calculation_id', authenticateToken, async (req, res)
   try {
     const { calculation_id } = req.params;
 
-    const result = await db.query(
+    const result = await db.query<CalculationRow>(
       'SELECT * FROM calculations WHERE calculation_id = $1',
       [calculation_id]
     );
@@ -479,7 +521,7 @@ app.get('/api/calculations/:calculation_id', authenticateToken, async (req, res)
       return res.status(404).json(createErrorResponse('Calculation not found', null, 'CALCULATION_NOT_FOUND'));
     }
 
-    const calculation = result.rows[0];
+    const calculation = result.rows[0] as CalculationRow;
 
     res.json({
       calculation: {
@@ -546,13 +588,13 @@ app.put('/api/calculations/:calculation_id', authenticateToken, async (req, res)
       RETURNING *
     `;
 
-    const result = await db.query(query, updateValues);
+    const result = await db.query<CalculationRow>(query, updateValues);
 
     if (result.rows.length === 0) {
       return res.status(404).json(createErrorResponse('Calculation not found', null, 'CALCULATION_NOT_FOUND'));
     }
 
-    const calculation = result.rows[0];
+    const calculation = result.rows[0] as CalculationRow;
 
     res.json({
       message: 'Calculation updated successfully',
@@ -562,7 +604,7 @@ app.put('/api/calculations/:calculation_id', authenticateToken, async (req, res)
         operation: calculation.operation,
         result: calculation.result,
         created_at: new Date(calculation.created_at).toISOString(),
-        updated_at: new Date(calculation.updated_at).toISOString(),
+        updated_at: new Date(calculation.updated_at!).toISOString(),
         device_type: calculation.device_type,
         device_id: calculation.device_id,
         error_message: calculation.error_message,
@@ -590,7 +632,7 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
     const validatedData = createSettingInputSchema.parse(req.body);
 
     // Ensure user can only create settings for themselves
-    if (validatedData.user_id !== req.user.user_id) {
+    if (validatedData.user_id !== req.user!.user_id) {
       return res.status(403).json(createErrorResponse('Access denied - can only create own settings', null, 'ACCESS_DENIED'));
     }
 
@@ -603,14 +645,14 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
     const settingId = uuidv4();
     const now = Date.now();
 
-    const result = await db.query(
+    const result = await db.query<SettingRow>(
       `INSERT INTO settings (setting_id, user_id, theme, button_size, created_at, updated_at) 
        VALUES ($1, $2, $3, $4, $5, $6) 
        RETURNING *`,
       [settingId, validatedData.user_id, validatedData.theme, validatedData.button_size, now, now]
     );
 
-    const setting = result.rows[0];
+    const setting = result.rows[0] as SettingRow;
 
       res.status(201).json({
         message: 'Settings created successfully',
@@ -620,7 +662,7 @@ app.post('/api/settings', authenticateToken, async (req, res) => {
           theme: setting.theme,
           button_size: setting.button_size,
           created_at: new Date(setting.created_at).toISOString(),
-          updated_at: new Date(setting.updated_at).toISOString()
+          updated_at: new Date(setting.updated_at!).toISOString()
         }
       });
   } catch (error) {
@@ -640,7 +682,7 @@ app.get('/api/settings/:setting_id', authenticateToken, async (req, res) => {
   try {
     const { setting_id } = req.params;
 
-    const result = await db.query(
+    const result = await db.query<SettingRow>(
       'SELECT * FROM settings WHERE setting_id = $1',
       [setting_id]
     );
@@ -649,10 +691,10 @@ app.get('/api/settings/:setting_id', authenticateToken, async (req, res) => {
       return res.status(404).json(createErrorResponse('Settings not found', null, 'SETTINGS_NOT_FOUND'));
     }
 
-    const setting = result.rows[0];
+    const setting = result.rows[0] as SettingRow;
 
     // Check if user owns these settings
-    if (setting.user_id !== req.user.user_id) {
+    if (setting.user_id !== req.user!.user_id) {
       return res.status(403).json(createErrorResponse('Access denied - can only view own settings', null, 'ACCESS_DENIED'));
     }
 
@@ -689,8 +731,8 @@ app.put('/api/settings/:setting_id', authenticateToken, async (req, res) => {
       return res.status(404).json(createErrorResponse('Settings not found', null, 'SETTINGS_NOT_FOUND'));
     }
 
-    const currentSettings = existingSettings.rows[0];
-    if (currentSettings.user_id !== req.user.user_id) {
+    const currentSettings = existingSettings.rows[0] as SettingRow;
+    if (currentSettings.user_id !== req.user!.user_id) {
       return res.status(403).json(createErrorResponse('Access denied - can only update own settings', null, 'ACCESS_DENIED'));
     }
 
@@ -730,9 +772,9 @@ app.put('/api/settings/:setting_id', authenticateToken, async (req, res) => {
       RETURNING *
     `;
 
-    const result = await db.query(query, updateValues);
+    const result = await db.query<SettingRow>(query, updateValues);
 
-    const setting = result.rows[0];
+    const setting = result.rows[0] as SettingRow;
 
     res.json({
       message: 'Settings updated successfully',
@@ -742,7 +784,7 @@ app.put('/api/settings/:setting_id', authenticateToken, async (req, res) => {
         theme: setting.theme,
         button_size: setting.button_size,
         created_at: new Date(setting.created_at).toISOString(),
-        updated_at: new Date(setting.updated_at).toISOString()
+        updated_at: new Date(setting.updated_at!).toISOString()
       }
     });
   } catch (error) {
